@@ -7,7 +7,7 @@
    <div class="card">
     <div class="card-header">Dashboard</div>
     <div class="card-body">
-       <a href="{{ route('test') }}">Prueba</a>
+       <a target="_blank" href="{{ route('test') }}">Prueba</a>
     </div>
    </div>
   </div>

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use App\Type;
 use App\Document;
+use App\DocumentDetail;
 
 
 class IndexController extends Controller
@@ -21,8 +22,22 @@ class IndexController extends Controller
      ->get();
     }
 
-    public function getDocuments($id)
+    public function getDocuments(Request $request, $id)
     {
-     return Document::with('type', 'client', 'branch')->where('tipo_id', $id)->get()->toJson();
+     $count = Document::with('type', 'client', 'branch')->where('tipo_id', $id)->count();
+     $data = Document::with('type', 'client', 'branch')->where('tipo_id', $id)
+     ->skip($request->page * $request->perPage)->take($request->perPage)
+     ->orderBy($request->sort['field'], $request->sort['type'])->get();
+     return response()->json(['totalRecords' => $count, 'rows' => $data]);
+    }
+
+    public function TestDetail()
+    {
+     DB::connection()->enableQueryLog();
+     // $data = DocumentDetail::select(DB::raw('Sum(cant_final) AS cantidad, producto_id, bodega_id'))->with('branch', 'product', 'product.category')
+     $data = DocumentDetail::select(DB::raw('Sum(cant_final) AS cantidad, producto_id, bodega_id'))->with('product', 'product.category')
+     ->groupBy('producto_id', 'bodega_id')->havingRaw('cantidad > 0')->get();
+     return DB::getQueryLog();
+     return $data;
     }
 }
