@@ -29,4 +29,14 @@ Route::namespace('Auth')->group(function () {
   });
 });
 
+Route::namespace('Document')->group(function () {
+  Route::group(['prefix' => 'document'], function () {
+    Route::group(['middleware' => 'auth:api'], function() {
+      Route::get('getTypes', 'IndexController@getTypes');
+      Route::post('getDocuments/{id}', 'IndexController@getDocuments');
+      Route::get('testDetail', 'IndexController@TestDetail');
+    });
+  });
+});
+
 Route::get('algo', 'HomeController@algo');
