@@ -30,8 +30,18 @@ class Product extends Model
      'usado'
     ];
 
+    public function documentDetail()
+    {
+        return $this->hasMany('App\DocumentDetail');
+    }
+
     public function category()
     {
-     return $this->belongsTo('App\Category')->select(['id', 'descripcion']);
+        return $this->belongsTo('App\Category', 'categoria_id', 'id')->select(['id', 'descripcion']);
+    }
+
+    public function size()
+    {
+        return $this->belongsTo('App\AdminTable', 'talla_id', 'id')->select(['id', 'descripcion']);
     }
 }
