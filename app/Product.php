@@ -32,6 +32,6 @@ class Product extends Model
 
     public function category()
     {
-     return $this->belongsTo('App\Category')->select(['id', 'descripcion']);
+     return $this->belongsTo('App\Category', 'categoria_id', 'id')->select(['id', 'descripcion']);
     }
 }

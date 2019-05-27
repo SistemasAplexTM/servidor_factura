@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Type;
 use App\Document;
 use App\DocumentDetail;
+use App\Product;
 
 
 class IndexController extends Controller
@@ -34,10 +35,9 @@ class IndexController extends Controller
     public function TestDetail()
     {
      DB::connection()->enableQueryLog();
-     // $data = DocumentDetail::select(DB::raw('Sum(cant_final) AS cantidad, producto_id, bodega_id'))->with('branch', 'product', 'product.category')
-     $data = DocumentDetail::select(DB::raw('Sum(cant_final) AS cantidad, producto_id, bodega_id'))->with('product', 'product.category')
+     $data = DocumentDetail::select(DB::raw('Sum(cant_final) AS cantidad, producto_id, bodega_id'))->with('branch', 'product')
      ->groupBy('producto_id', 'bodega_id')->havingRaw('cantidad > 0')->get();
-     return DB::getQueryLog();
+     // return DB::getQueryLog();
      return $data;
     }
 }

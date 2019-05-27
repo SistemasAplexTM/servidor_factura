@@ -42,6 +42,6 @@ class DocumentDetail extends Model
     }
     public function product()
     {
-     return $this->belongsTo('App\Product', 'producto_id')->select(['id', 'descripcion', 'codigo', 'referencia', 'precio_venta', 'precio_pormayor']);
+     return $this->belongsTo('App\Product', 'producto_id')->select(['id', 'descripcion', 'categoria_id', 'codigo', 'referencia', 'precio_venta', 'precio_pormayor'])->with('category');
     }
 }
