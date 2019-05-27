@@ -38,10 +38,14 @@ class DocumentDetail extends Model
 
     public function branch()
     {
-     return $this->belongsTo('App\Branch', 'bodega_id')->select(['id', 'razon_social']);
+     return $this->belongsTo('App\Branch', 'bodega_id')
+     ->select(['id', 'razon_social'])->where('id', '<>', 0);
     }
     public function product()
     {
-     return $this->belongsTo('App\Product', 'producto_id')->select(['id', 'descripcion', 'categoria_id', 'codigo', 'referencia', 'precio_venta', 'precio_pormayor'])->with('category');
+     return $this->belongsTo('App\Product', 'producto_id')
+     ->select(['id', 'descripcion', 'categoria_id', 'talla_id', 'codigo', 'referencia', 'precio_venta', 'precio_pormayor'])
+     ->with(['category', 'size'])->whereNull('deleted_at')->where('categoria_id', '<>', 0);
     }
+
 }

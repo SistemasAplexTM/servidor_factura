@@ -16,7 +16,9 @@ class Category extends Model
   'usado'
  ];
 
- public function product(){
+  public function products()
+  {
    return $this->hasMany('App\Product');
- }
+  }
+
 }
