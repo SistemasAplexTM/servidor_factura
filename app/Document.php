@@ -49,7 +49,7 @@ class Document extends Model
 
     public function client()
     {
-        return $this->belongsTo('App\Client', 'terceros_id')->select(['id', 'nombre']);
+        return $this->belongsTo('App\People', 'terceros_id')->select(['id', 'nombre']);
     }
 
     public function branch()

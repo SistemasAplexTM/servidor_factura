@@ -39,4 +39,16 @@ Route::namespace('Document')->group(function () {
   });
 });
 
+Route::namespace('People')->group(function () {
+  Route::group(['prefix' => 'people'], function () {
+    Route::group(['middleware' => 'auth:api'], function() {
+      Route::post('save', 'IndexController@save');
+      Route::put('update', 'IndexController@update');
+      Route::delete('delete', 'IndexController@delete');
+      Route::get('getById/{id}', 'IndexController@getById');
+      Route::get('search/{data}/{type}', 'IndexController@search');
+    });
+  });
+});
+
 Route::get('algo', 'HomeController@algo');
