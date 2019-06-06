@@ -32,10 +32,13 @@ Route::namespace('Auth')->group(function () {
 Route::namespace('Document')->group(function () {
   Route::group(['prefix' => 'document'], function () {
     Route::group(['middleware' => 'auth:api'], function() {
-      Route::get('getTypes', 'IndexController@getTypes');
-      Route::post('getDocuments/{id}', 'IndexController@getDocuments');
-      Route::get('testDetail', 'IndexController@TestDetail');
-    });
+     Route::get('getTypes', 'IndexController@getTypes');
+     Route::post('save', 'BillController@save');
+     Route::post('savePaymentMethod', 'BillController@savePaymentMethod');
+     Route::get('getCupon/{data}', 'BillController@getCupon');
+     Route::post('getDocuments/{id}', 'IndexController@getDocuments');
+     Route::get('testDetail', 'IndexController@TestDetail');
+   });
   });
 });
 
@@ -49,6 +52,18 @@ Route::namespace('People')->group(function () {
       Route::get('search/{data}/{type}', 'IndexController@search');
     });
   });
+});
+
+Route::namespace('Product')->group(function () {
+  Route::group(['prefix' => 'product'], function () {
+    Route::group(['middleware' => 'auth:api'], function() {
+      Route::post('getByCode', 'IndexController@getByCode');
+    });
+  });
+});
+
+Route::prefix('setup')->as('setup.')->group(function(){
+	Route::get('get', 'SetupController@get');
 });
 
 Route::get('algo', 'HomeController@algo');
