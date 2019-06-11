@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Http\Request;
-
+use App\User;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -32,7 +32,7 @@ Route::namespace('Auth')->group(function () {
 Route::namespace('Document')->group(function () {
   Route::group(['prefix' => 'document'], function () {
     Route::group(['middleware' => 'auth:api'], function() {
-     Route::get('getTypes', 'IndexController@getTypes');
+     Route::get('getTypes/{rol}/{branch}', 'IndexController@getTypes');
      Route::post('save', 'BillController@save');
      Route::post('savePaymentMethod', 'BillController@savePaymentMethod');
      Route::get('getCupon/{data}', 'BillController@getCupon');
@@ -67,3 +67,6 @@ Route::prefix('setup')->as('setup.')->group(function(){
 });
 
 Route::get('algo', 'HomeController@algo');
+Route::get('usuario', function(){
+ return response()->json(Auth::user()->with('branch')->find(3));
+});

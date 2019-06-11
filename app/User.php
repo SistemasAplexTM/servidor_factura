@@ -42,4 +42,9 @@ class User extends Authenticatable
     {
         return $this->hasOne('App\Usuario');
     }
+
+    public function branch()
+    {
+        return $this->hasOne('App\Branch', 'id','sucursal_id')->select(['id', 'razon_social']);
+    }
 }

@@ -30,10 +30,10 @@ class BillController extends Controller
        $table_detail[$key]['id'] = $value->id;
      }
      $answer = array(
-         "code"   => 200,
-         "consecutive" => $document['consecutive'],
-         "id" => $document['id'],
-         "table_detail" => $table_detail
+       "code"   => 200,
+       "consecutive" => $document['consecutive'],
+       "id" => $document['id'],
+       "table_detail" => $table_detail
      );
      DB::commit();
      return $answer;

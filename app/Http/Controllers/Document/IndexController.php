@@ -11,25 +11,36 @@ use App\DocumentDetail;
 use App\Document;
 use App\Product;
 use App\Type;
+use App\TypePivotDocument;
 
 class IndexController extends Controller
 {
-  public function getTypes($rol = 1, $branch = 10)
+  public function getTypes($rol, $branch)
   {
-   return Type::select('id', 'descripcion', 'icono')
+   return TypePivotDocument::select('id', 'tipo_id')
+   ->with('type')
    ->whereRaw('FIND_IN_SET(?,credenciales)', [$rol])
-   ->whereRaw('FIND_IN_SET(?,tiendas)', [$branch])
-   ->orWhere('tiendas',  null)
-   ->where('deleted_at', null)
+   ->whereRaw("(FIND_IN_SET(?,tiendas) OR tiendas IS NULL OR tiendas = '')", [$branch])
    ->get();
   }
 
   public function getDocuments(Request $request, $id)
   {
+   // DB::connection()->enableQueryLog();
    $count = Document::with('type', 'client', 'branch')->where('tipo_id', $id)->count();
-   $data = Document::with('type', 'client', 'branch')->where('tipo_id', $id)
+   $data = Document::select(
+    'id', 'consecutivo', 'fecha', 'observacion',
+    'sucursal_id', 'tipo_id', 'terceros_id',
+    DB::raw("(SELECT ROUND(
+	SUM(
+		a.total_venta + ((a.total_venta * a.iva) / 100)
+	)
+) AS total_venta FROM detalle AS a WHERE a.documento_id = documento.id) AS total_venta")
+    )
+   ->with('type', 'client', 'branch')->where('tipo_id', $id)
    ->skip($request->page * $request->perPage)->take($request->perPage)
    ->orderBy($request->sort['field'], $request->sort['type'])->get();
+   // return DB::getQueryLog();
    return response()->json(['totalRecords' => $count, 'rows' => $data]);
   }
 

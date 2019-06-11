@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\User;
+use App\Branch;
 
 class AuthController extends Controller
 {
@@ -68,7 +69,8 @@ class AuthController extends Controller
 
       return response()->json([
           'code' => 200,
-          'user' => json_encode($user),
+          // 'user' => json_encode($user),
+          'user' => json_encode(User::with('branch')->find(Auth::id())),
           'access_token' => $tokenResult->accessToken,
           'token_type' => 'Bearer',
           'expires_at' => Carbon::parse(
