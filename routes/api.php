@@ -37,7 +37,9 @@ Route::namespace('Document')->group(function () {
      Route::post('savePaymentMethod', 'BillController@savePaymentMethod');
      Route::get('getCupon/{data}', 'BillController@getCupon');
      Route::post('getDocuments/{id}', 'IndexController@getDocuments');
+     Route::get('documentById/{id}', 'BillController@documentById');
      Route::get('testDetail', 'IndexController@TestDetail');
+     Route::put('update/{id}', 'BillController@update');
    });
   });
 });

@@ -13,6 +13,7 @@ use App\Product;
 use App\Type;
 use App\PaymentDetail;
 use App\Cupons;
+use App\People;
 
 class BillController extends Controller
 {
@@ -164,8 +165,9 @@ class BillController extends Controller
     'detalle.producto_id AS product_id',
     'detalle.cantidad',
     'detalle.costo',
-    'detalle.precio',
+    'detalle.precio AS precio_venta',
     'detalle.descuento',
+    'detalle.descuento AS descuento_venta',
     'detalle.iva AS porcentaje_iva',
     DB::raw('0 AS precio_con_iva'),
     DB::raw('0 AS precio_pormayor'),
@@ -174,13 +176,14 @@ class BillController extends Controller
     DB::raw('(ROUND((detalle.precio * detalle.cantidad) * detalle.iva / 100) + (detalle.precio * detalle.cantidad))  AS monto_total')
     )->where('documento_id', $id_document)->get();
  }
+
  public function documentById($id)
  {
    DB::beginTransaction();
    try {
      $document   = Document::findOrFail($id);
-     $client     = Tercero::findOrFail($document->terceros_id);
-     $seller     = Tercero::findOrFail($document->vendedor_id);
+     $client     = People::findOrFail($document->terceros_id);
+     $seller     = People::findOrFail($document->vendedor_id);
      $detail     = $this->getDataDetailByIdDocument($id);
      DB::commit();
      $answer = array(
@@ -217,6 +220,7 @@ class BillController extends Controller
    }
    return $answer;
  }
+
  public function savePaymentMethod(Request $request)
  {
     DB::beginTransaction();
@@ -268,4 +272,61 @@ class BillController extends Controller
 
    return \Response::json($answer);
  }
+
+ public function update(Request $request, $id)
+  {
+    $type = $this->getType(Auth::user()->sucursal_id);
+    DB::beginTransaction();
+    try {
+      $document = $this->updateHeadboard($id, $request, $type);
+      $this->updateDetail($request['table_detail'], $id, $type,  $request['wholesale']);
+      $answer = array(
+          "code"   => 200
+      );
+      DB::commit();
+      return $answer;
+    } catch (Exception $e) {
+      DB::rollback();
+      $answer = array(
+          "error" => $e,
+          "code"  => 600,
+      );
+      return $answer;
+    }
+  }
+
+  public function updateHeadboard($id, $request, $type)
+  {
+    try {
+      return Document::where('id', $id)->update($this->dataHeadboard($request, $type));
+    } catch (Exception $e) {
+      $answer = array(
+          "error" => $e,
+          "code"  => 600,
+      );
+      return $answer;
+    }
+  }
+
+  public function updateDetail($detail, $document_id, $type, $wholesale)
+ {
+   try {
+     foreach ($detail as $key) {
+       if(isset($key['id'])){
+         $data[] = DocumentDetail::where('id', $key['id'])->update($this->dataDetail($document_id, $key, $type, $wholesale));
+       }else{
+         $this->saveDetail($detail, $document_id, $type);
+       }
+     }
+     return $data;
+   } catch (Exception $e) {
+     $answer = array(
+         "error" => $e,
+         "code"  => 600,
+     );
+     return $answer;
+   }
+
+ }
+
 }

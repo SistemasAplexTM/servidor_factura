@@ -32,10 +32,10 @@ class IndexController extends Controller
     'id', 'consecutivo', 'fecha', 'observacion',
     'sucursal_id', 'tipo_id', 'terceros_id',
     DB::raw("(SELECT ROUND(
-	SUM(
-		a.total_venta + ((a.total_venta * a.iva) / 100)
-	)
-) AS total_venta FROM detalle AS a WHERE a.documento_id = documento.id) AS total_venta")
+      	SUM(
+      		a.total_venta + ((a.total_venta * a.iva) / 100)
+      	)
+      ) AS total_venta FROM detalle AS a WHERE a.documento_id = documento.id) AS total_venta")
     )
    ->with('type', 'client', 'branch')->where('tipo_id', $id)
    ->skip($request->page * $request->perPage)->take($request->perPage)
