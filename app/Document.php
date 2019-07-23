@@ -44,7 +44,7 @@ class Document extends Model
 
     public function type()
     {
-        return $this->belongsTo('App\Type', 'tipo_id')->select(['id', 'descripcion']);
+        return $this->belongsTo('App\Type', 'tipo_id')->select(['id', 'descripcion', 'type_pivot_id']);
     }
 
     public function client()

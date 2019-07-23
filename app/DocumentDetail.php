@@ -48,4 +48,15 @@ class DocumentDetail extends Model
      ->with(['category', 'size'])->whereNull('deleted_at')->where('categoria_id', '<>', 0);
     }
 
+    public function document()
+    {
+      return $this->belongsTo('App\Document', 'documento_id')
+      ->select(['id', 'fecha', 'sucursal_id', 'tipo_id'])
+      ->with(['branch', 'type'])
+      ->whereHas('type', function ($q){
+        $q->where('type_pivot_id', 1);
+      })
+      ->whereNull('deleted_at')->where('sucursal_id', '<>', 0);
+    }
+
 }
