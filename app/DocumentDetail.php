@@ -51,7 +51,7 @@ class DocumentDetail extends Model
     public function document()
     {
       return $this->belongsTo('App\Document', 'documento_id')
-      ->select(['id', 'fecha', 'sucursal_id', 'tipo_id'])
+      ->select(['id', 'fecha', 'sucursal_id', 'tipo_id', 'consecutivo'])
       ->with(['branch', 'type'])
       ->whereHas('type', function ($q){
         $q->where('type_pivot_id', 1);

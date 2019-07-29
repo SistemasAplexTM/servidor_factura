@@ -73,50 +73,60 @@ class IndexController extends Controller
    });
   }
 
-  public function moreSales($range_date, $branch_id = null, $category = null)
+  public function moreSales($range_date, $branch_id = false, $category = false)
   {
-    // SELECT
-    // a.id,
-    // d.consecutivo,
-    // d.fecha,
-    // e.razon_social,
-    // b.codigo,
-    // b.descripcion AS producto,
-    // c.descripcion AS categoria,
-    // a.cantidad,
-    // a.costo,
-    // a.venta,
-    // a.iva,
-    // c.id
-    // FROM
-    // detalle AS a
-    // INNER JOIN producto AS b ON a.producto_id = b.id
-    // INNER JOIN unidad_medida AS c ON b.categoria_id = c.id
-    // INNER JOIN documento AS d ON a.documento_id = d.id
-    // INNER JOIN setup AS e ON d.sucursal_id = e.id
-    // INNER JOIN tipo AS f ON d.tipo_id = f.id
-    // WHERE
-    // a.deleted_at IS NULL AND
-    // d.deleted_at IS NULL AND
-    // d.fecha BETWEEN '2019-07-01' AND '2019-07-23' AND
-    // f.type_pivot_id = 1
-
-    // return $start . ' / ' . $end;
-    // exit();
-    // DB::connection()->enableQueryLog();
-    return $data = DocumentDetail::select(
-      'id','documento_id','producto_id'
-      )->with(['product', 'document'])
-      ->whereHas('document', function ($q) use ($range_date){
         $dateArray = explode('.', $range_date);
         $start = date("Y-m-d", strtotime(trim($dateArray[0])));
         $end = date("Y-m-d", strtotime(trim($dateArray[1])));
-        $q->whereBetween('fecha', [$start, $end]);
-      })
-      // ->whereBetween('created_at', ['2019-07-22', '2019-07-23'])
-      ->whereNull('detalle.deleted_at')
-      ->where([['bodega_id', '<>', 0]])->get();
+    // DB::connection()->enableQueryLog();
+        $data = DocumentDetail::select(
+        'detalle.id',
+        'd.consecutivo',
+        'd.fecha',
+        'e.razon_social',
+        'b.codigo',
+        'b.descripcion AS producto',
+        'c.descripcion AS categoria',
+        'detalle.cantidad',
+        'detalle.costo',
+        'detalle.venta',
+        'detalle.iva',
+        'detalle.bodega_id',
+        'detalle.producto_id'
+        )
+        ->join('producto AS b', 'detalle.producto_id', 'b.id')
+        ->join('unidad_medida AS c', 'b.categoria_id', 'c.id')
+        ->join('documento AS d', 'detalle.documento_id', 'd.id')
+        ->join('setup AS e', 'd.sucursal_id', 'e.id')
+        ->join('tipo AS f', 'd.tipo_id', 'f.id')
+        ->whereNull('detalle.deleted_at')
+        ->whereNull('d.deleted_at')
+        ->whereBetween('d.fecha', [$start, $end])
+        ->where('f.type_pivot_id', 1)
+        ->when($branch_id, function ($query, $branch_id) {
+            return $query->where('d.sucursal_id', $branch_id);
+        })
+        ->when($category, function ($query, $category) {
+            return $query->where('b.categoria_id', $category);
+        })
+        ->get();
+
       // return DB::getQueryLog();
+
+      return (new FastExcel($data))->download('informec.xlsx', function($data){
+       return [
+        'Consecutivo'   => $data->consecutivo,
+        'Fecha'         => $data->fecha,
+        'Razon social'  => $data->razon_social,
+        'Código'        => $data->codigo,
+        'Producto'      => $data->producto,
+        'Categoría'     => $data->categoria,
+        'Cantidad'      => $data->cantidad,
+        'Costo'         => $data->costo,
+        'Venta'         => $data->venta,
+        'Iva'           => $data->iva
+       ];
+      });
   }
 
 }
