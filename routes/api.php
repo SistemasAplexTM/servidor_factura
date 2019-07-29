@@ -17,6 +17,13 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+Route::group(['prefix' => 'global'], function () {
+ Route::group(['middleware' => 'auth:api'], function() {
+ Route::get('validateCashRegister/{branch}', 'GlobalController@validateCashRegister');
+ Route::post('saveCashRegister', 'GlobalController@saveCashRegister');
+ });
+});
+
 Route::namespace('Auth')->group(function () {
   Route::group(['prefix' => 'auth'], function () {
     Route::post('login', 'AuthController@login');
@@ -33,16 +40,18 @@ Route::namespace('Document')->group(function () {
   Route::group(['prefix' => 'document'], function () {
     Route::group(['middleware' => 'auth:api'], function() {
      Route::get('getTypes/{rol}/{branch}', 'IndexController@getTypes');
+     Route::get('validateCashRegister', 'IndexController@validateCashRegister');
      Route::post('save', 'BillController@save');
      Route::post('savePaymentMethod', 'BillController@savePaymentMethod');
      Route::get('getCupon/{data}', 'BillController@getCupon');
      Route::post('getDocuments/{id}', 'IndexController@getDocuments');
      Route::get('documentById/{id}', 'BillController@documentById');
-     Route::get('testDetail', 'IndexController@TestDetail');
      Route::put('update/{id}', 'BillController@update');
+     Route::post('getInventory/{branch}', 'BillController@getInventory');
    });
   });
 });
+
 
 Route::namespace('People')->group(function () {
   Route::group(['prefix' => 'people'], function () {
@@ -52,6 +61,14 @@ Route::namespace('People')->group(function () {
       Route::delete('delete', 'IndexController@delete');
       Route::get('getById/{id}', 'IndexController@getById');
       Route::get('search/{data}/{type}', 'IndexController@search');
+    });
+  });
+});
+
+Route::namespace('Report')->group(function () {
+  Route::group(['prefix' => 'report'], function () {
+    Route::group(['middleware' => 'auth:api'], function() {
+     Route::get('testDetail', 'IndexController@TestDetail');
     });
   });
 });

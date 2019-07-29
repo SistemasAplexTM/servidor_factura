@@ -72,28 +72,38 @@ class IndexController extends Controller
         }
     }
 
-    public function getById($id){
+    public function getById($id)
+    {
         $data = Tercero::findOrFail($id);
         return $data;
     }
 
-    public function search($data, $type){
-     DB::connection()->enableQueryLog();
-     $where = array(['nombre', 'LIKE', '%' . $data . '%'], [$type, 1]);
+    public function search($data, $type)
+    {
+     // DB::connection()->enableQueryLog();
+     $where = array(['nombre', 'LIKE', '%' . $data . '%']);
      $orWhere = array(['documento', 'LIKE', $data . '%']);
-     // return DB::getQueryLog();
       switch ($type) {
         case 'cliente':
-          $answer = People::where($where)->orWhere($orWhere)->get();
+          $answer = People::where($where)->where($type, 1)->orWhere($orWhere)->get();
         break;
         case 'vendedor':
-        $answer = People::join('pivot_tienda_vendedor AS b', 'b.id_vendedor', 'terceros.id')->where($type, 1)
-        ->where($where)->where([['b.id_tienda', Auth::user()->sucursal_id]])->orWhere($orWhere)->get();
+        $answer = DB::table('pivot_tienda_vendedor AS a')
+        ->join('terceros AS b', 'b.id', 'a.id_vendedor')
+        ->select('*')
+        ->whereRaw('(nombre LIKE "%'  . $data .  '%" or documento LIKE "' . $data . '%")')
+        ->where('a.id_tienda', Auth::user()->sucursal_id)
+        ->get();
+        // $answer = People::join('pivot_tienda_vendedor AS b', 'b.id_vendedor', 'terceros.id')
+        // ->where($type, 1)->where($where)->where([['b.id_tienda', Auth::user()->sucursal_id]])
+        // ->orWhere($orWhere)->get();
         break;
         default:
 
           break;
       }
+      // return DB::getQueryLog();
       return array( 'data' => $answer );
     }
+
 }

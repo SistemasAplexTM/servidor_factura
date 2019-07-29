@@ -25,4 +25,10 @@ class PaymentDetail extends Model
       'id_documento',
       'nota_credito'
   ];
+
+  public function payment_form()
+  {
+   return $this->belongsTo('App\Payment', 'forma_pago_id')
+   ->select(['id', 'descripcion']);
+  }
 }

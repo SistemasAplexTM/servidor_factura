@@ -42,6 +42,12 @@ class Document extends Model
      'sin_consecutivo'
     ];
 
+    public function paymentDetail()
+    {
+        return $this->hasMany('App\PaymentDetail', 'documento_id')
+        ->selectRaw('SUM(valor) AS valor, documento_id')->groupBy('documento_id');
+    }
+
     public function type()
     {
         return $this->belongsTo('App\Type', 'tipo_id')->select(['id', 'descripcion']);

@@ -67,13 +67,58 @@ class BillController extends Controller
    }
  }
 
+ public function saveDetail($detail, $document_id, $type, $wholesale)
+ {
+  try {
+    foreach ($detail as $key) {
+      $data[] = DocumentDetail::create($this->dataDetail($document_id, $key, $type, $wholesale));
+    }
+    return $data;
+  } catch (Exception $e) {
+    $answer = array(
+     "error" => $e,
+     "code"  => 600,
+    );
+    return $answer;
+  }
+ }
+
+ public function savePaymentMethod(Request $request)
+ {
+    DB::beginTransaction();
+    try {
+      PaymentDetail::where('documento_id', $request->id_document)->delete();
+      foreach ($request->all() as $key => $value) {
+        if($value['valor'] != 0){
+         $value['documento_id'] = $request->id_document;
+          PaymentDetail::create($value);
+        }
+      }
+      Document::where('id', $request->id_document)->update(['estatus' => 2]);
+      $payment = PaymentDetail::with('payment_form')->where('documento_id', $request->id_document)->get();
+      $answer = array(
+          "code"   => 200,
+          "payment" =>  $payment
+      );
+      DB::commit();
+      return $answer;
+    } catch (Exception $e) {
+       DB::rollback();
+       $answer = array(
+           "error" => $e,
+           "code"  => 600,
+       );
+       return $answer;
+    }
+  }
+
  public function dataHeadboard($request, $type)
  {
   return [
    'usuario_id' => Auth::user()->usuario_id,
    'tipo_id' => $type->id,
    'fecha' => date('Y-m-d', strtotime($request['form_document']['date'])),
-   'fecha_recibido' => date('Y-m-d', strtotime($request['form_document']['date_receip'])),
+   // 'fecha_recibido' => date('Y-m-d', strtotime($request['form_document']['date_receip'])),
    'terceros_id' => $request['form_document']['client_id'],
    'dias' => $request['form_document']['days'],
    'descuento' => $request['totals']['descuento_2'],
@@ -113,22 +158,6 @@ class BillController extends Controller
   ];
  }
 
- public function saveDetail($detail, $document_id, $type, $wholesale)
- {
-  try {
-    foreach ($detail as $key) {
-      $data[] = DocumentDetail::create($this->dataDetail($document_id, $key, $type, $wholesale));
-    }
-    return $data;
-  } catch (Exception $e) {
-    $answer = array(
-     "error" => $e,
-     "code"  => 600,
-    );
-    return $answer;
-  }
- }
-
  public function getQuantityFinal($quantity, $transaction, $return)
  {
    $answer = 0;
@@ -160,8 +189,10 @@ class BillController extends Controller
 
  public function getDataDetailByIdDocument($id_document)
  {
+  // DB::connection()->enableQueryLog();
    return DocumentDetail::select(
     'detalle.id',
+    'detalle.producto_id',
     'detalle.producto_id AS product_id',
     'detalle.cantidad',
     'detalle.costo',
@@ -169,39 +200,40 @@ class BillController extends Controller
     'detalle.descuento',
     'detalle.descuento AS descuento_venta',
     'detalle.iva AS porcentaje_iva',
+    'detalle.descripcion AS producto',
     DB::raw('0 AS precio_con_iva'),
     DB::raw('0 AS precio_pormayor'),
-    'detalle.descripcion AS producto',
     DB::raw('ROUND((detalle.precio * detalle.cantidad) * detalle.iva / 100) AS iva'),
     DB::raw('(ROUND((detalle.precio * detalle.cantidad) * detalle.iva / 100) + (detalle.precio * detalle.cantidad))  AS monto_total')
-    )->where('documento_id', $id_document)->get();
+    )->with('product')
+    ->where('documento_id', $id_document)->get();
+    // return DB::getQueryLog();
  }
 
  public function documentById($id)
  {
-   DB::beginTransaction();
    try {
      $document   = Document::findOrFail($id);
      $client     = People::findOrFail($document->terceros_id);
      $seller     = People::findOrFail($document->vendedor_id);
+     $payment     = PaymentDetail::with('payment_form')->where('documento_id', $id)->get();
      $detail     = $this->getDataDetailByIdDocument($id);
-     DB::commit();
-     $answer = array(
-        "code"      => 200,
-        "document"  => $document,
-        "detail"    => $detail,
-        "client"    => $client,
-        "seller"    => $seller,
-        "totals"    => ''
-       );
+     $answer = [
+      "code"      => 200,
+      "document"  => $document,
+      "detail"    => $detail,
+      "client"    => $client,
+      "seller"    => $seller,
+      "payment"    => $payment,
+      "totals"    => ''
+     ];
      return $answer;
    } catch (Exception $e) {
-       DB::rollback();
-       $answer = array(
-           "error" => $e,
-           "code"  => 600,
-       );
-       return $answer;
+     $answer = array(
+       "error" => $e,
+       "code"  => 600,
+     );
+     return $answer;
    }
  }
 
@@ -221,33 +253,8 @@ class BillController extends Controller
    return $answer;
  }
 
- public function savePaymentMethod(Request $request)
+ public function getCupon($data)
  {
-    DB::beginTransaction();
-    try {
-      PaymentDetail::where('documento_id', $request->id_document)->delete();
-      foreach ($request->all() as $key => $value) {
-        if($value['valor'] != 0){
-          PaymentDetail::create($value);
-        }
-      }
-      Document::where('id', $request->id_document)->update(['estatus' => 2]);
-      $answer = array(
-          "code"   => 200
-      );
-      DB::commit();
-      return $answer;
-    } catch (Exception $e) {
-       DB::rollback();
-       $answer = array(
-           "error" => $e,
-           "code"  => 600,
-       );
-       return $answer;
-    }
-  }
-
-  public function getCupon($data){
    $datos = Cupons::where('codigo_barras', $data)->first();
    if($datos != '' or $datos != false){
      $code = 200;
@@ -273,8 +280,39 @@ class BillController extends Controller
    return \Response::json($answer);
  }
 
+ public function getInventory(Request $request, $branch)
+ {
+  // if (!$request->columnFilters['product.codigo'] || !$request->columnFilters['product.descripcion']) {
+  //  $data = [];
+  //  $count = 0;
+  // }else{
+   $data = DocumentDetail::select(
+    DB::raw('SUM(cant_final) AS saldo'),
+    'producto_id'
+    )
+    ->whereNull('deleted_at')
+    ->where('bodega_id', $branch)
+    ->with('product')
+    ->whereHas('product',function($q) use ($request){
+     $q->where('codigo', 'LIKE' ,$request->columnFilters['product.codigo'] . '%');
+     $q->where('descripcion', 'LIKE' , '%' . $request->columnFilters['product.descripcion'] . '%');
+    })
+    ->groupBy('producto_id')
+    ->having('saldo', '>', 0)
+    ->skip($request->page * $request->perPage)->take($request->perPage)
+    ->orderBy($request->sort['field'], $request->sort['type'])
+    ->get();
+
+    $count = DB::select(
+     DB::raw("Select Count(producto_id) AS cant from (SELECT producto_id FROM detalle WHERE deleted_at IS NULL AND bodega_id = $branch GROUP BY producto_id HAVING SUM(cant_final) > 0) AS cant")
+    );
+    $count = $count[0]->cant;
+
+   return response()->json(['totalRecords' => $count, 'rows' => $data]);
+ }
+
  public function update(Request $request, $id)
-  {
+ {
     $type = $this->getType(Auth::user()->sucursal_id);
     DB::beginTransaction();
     try {
@@ -295,8 +333,8 @@ class BillController extends Controller
     }
   }
 
-  public function updateHeadboard($id, $request, $type)
-  {
+ public function updateHeadboard($id, $request, $type)
+ {
     try {
       return Document::where('id', $id)->update($this->dataHeadboard($request, $type));
     } catch (Exception $e) {
@@ -308,14 +346,20 @@ class BillController extends Controller
     }
   }
 
-  public function updateDetail($detail, $document_id, $type, $wholesale)
+ public function updateDetail($detail, $document_id, $type, $wholesale)
  {
    try {
+     $deletes = DocumentDetail::where('documento_id', $document_id)->get();
+     foreach ($deletes as $valueD) {
+      if (array_search($valueD->id, array_column($detail, 'id')) === false) {
+       DocumentDetail::where('id', $valueD->id)->delete();
+      }
+     }
      foreach ($detail as $key) {
        if(isset($key['id'])){
          $data[] = DocumentDetail::where('id', $key['id'])->update($this->dataDetail($document_id, $key, $type, $wholesale));
        }else{
-         $this->saveDetail($detail, $document_id, $type);
+         $this->saveDetail($detail, $document_id, $type, $wholesale);
        }
      }
      return $data;

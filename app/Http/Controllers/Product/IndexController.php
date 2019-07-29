@@ -18,6 +18,7 @@ class IndexController extends Controller
      DB::raw("producto.id AS product_id,
      producto.descripcion AS producto,
      precio_venta,
+     codigo,
      precio_pormayor,
      precio_con_iva,
      categoria_id,
@@ -29,7 +30,8 @@ class IndexController extends Controller
      ROUND(b.valor * precio_venta / 100) AS iva,
      ROUND(b.valor,0) AS porcentaje_iva"
          )
-     )->join('iva AS b', 'iva_id', 'b.id')->where('codigo', $code)->first();
+     )->with('category')
+     ->join('iva AS b', 'iva_id', 'b.id')->where('codigo', $code)->first();
 
    if ($data) {
      $saldo = DB::select(DB::raw("CALL getSaldoProducto(:bodega, :id)"),[
@@ -133,4 +135,9 @@ class IndexController extends Controller
    }
    return ['precio_venta' => $precio_venta, 'descuento' => round($descuento, 0), 'iva' => round($valor_iva, 0), 'monto_total' => $monto_total];
  }
+
+  public function getInventory($value='')
+  {
+   return ['data' => []];
+  }
 }
