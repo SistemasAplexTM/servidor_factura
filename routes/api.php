@@ -89,3 +89,15 @@ Route::get('algo', 'HomeController@algo');
 Route::get('usuario', function(){
  return response()->json(Auth::user()->with('branch')->find(3));
 });
+
+Route::namespace('Security')->group(function () {
+  Route::group(['prefix' => 'security'], function () {
+    Route::group(['middleware' => 'auth:api'], function() {
+      Route::get('createRol', 'IndexController@createRol');
+      Route::get('createPermission', 'IndexController@createPermission');
+      Route::get('assignRoleToPermission', 'IndexController@assignRoleToPermission');
+      Route::get('deleteRoleToPermission', 'IndexController@deleteRoleToPermission');
+      Route::get('assignRoleToUser', 'IndexController@assignRoleToUser');
+    });
+  });
+});

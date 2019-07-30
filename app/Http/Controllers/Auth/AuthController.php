@@ -66,11 +66,13 @@ class AuthController extends Controller
       $tokenResult = $user->createToken('Personal Access Token');
       $token = $tokenResult->token;
       $token->save();
-
+      $user = User::with('branch', 'roles')->find(Auth::id());
+      // consultar y asignar los permisos de cada rol al objeto usuario
+      $user->getPermissionsViaRoles();
       return response()->json([
           'code' => 200,
           // 'user' => json_encode($user),
-          'user' => json_encode(User::with('branch')->find(Auth::id())),
+          'user' => json_encode($user),
           'access_token' => $tokenResult->accessToken,
           'token_type' => 'Bearer',
           'expires_at' => Carbon::parse(
