@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use App\Product;
+use App\Category;
 
 class IndexController extends Controller
 {
@@ -139,5 +140,19 @@ class IndexController extends Controller
   public function getInventory($value='')
   {
    return ['data' => []];
+  }
+
+  public function getAllCategories()
+  {
+    $data = Category::select(
+      'id',
+      'descripcion AS name'
+      )
+    ->where([
+     ['id', '<>', 0]
+    ])
+    ->orderBy('name', 'ASC')
+    ->get();
+    return array('data' => $data);
   }
 }

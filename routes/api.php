@@ -77,6 +77,15 @@ Route::namespace('Product')->group(function () {
   Route::group(['prefix' => 'product'], function () {
     Route::group(['middleware' => 'auth:api'], function() {
       Route::post('getByCode', 'IndexController@getByCode');
+      Route::get('getAllCategories', 'IndexController@getAllCategories');
+    });
+  });
+});
+
+Route::namespace('Branch')->group(function () {
+  Route::group(['prefix' => 'branch'], function () {
+    Route::group(['middleware' => 'auth:api'], function() {
+     Route::get('get', 'IndexController@get');
     });
   });
 });
