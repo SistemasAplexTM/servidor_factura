@@ -74,7 +74,7 @@ class IndexController extends Controller
    });
   }
 
-  public function moreSales($range_date, $branch_id = false, $category = false)
+  public function moreSales($date_ini, $date_fin, $branch_id = false, $category = false)
   {
     if ($branch_id == 'null') {
       $branch_id = false;
@@ -82,9 +82,9 @@ class IndexController extends Controller
     if ($category == 'null') {
       $category = false;
     }
-      $dateArray = explode('.', $range_date);
-      $start = date("Y-m-d", strtotime(trim($dateArray[0])));
-      $end = date("Y-m-d", strtotime(trim($dateArray[1])));
+      // $dateArray = explode('@', $range_date);
+      $start = $date_ini;
+      $end = $date_fin;
   // DB::connection()->enableQueryLog();
       $data = DocumentDetail::select(
       'detalle.id',
@@ -117,22 +117,21 @@ class IndexController extends Controller
           return $query->where('b.categoria_id', $category);
       })
       ->get();
-
     // return DB::getQueryLog();
-
-    return (new FastExcel($data))->download('informec.xlsx', function($data){
-     return [
-      'Consecutivo'   => $data->consecutivo,
-      'Fecha'         => $data->fecha,
-      'Razon social'  => $data->razon_social,
-      'Código'        => $data->codigo,
-      'Producto'      => $data->producto,
-      'Categoría'     => $data->categoria,
-      'Cantidad'      => $data->cantidad,
-      'Costo'         => $data->costo,
-      'Venta'         => $data->venta,
-      'Iva'           => $data->iva
-     ];
+    if ($data->count() == 0){
+     $data = [];
+    }
+    return (new FastExcel($data))->download('informe_comercial.xlsx', function($data){
+      return [
+        // 'Item'      => $data->consecutivo,
+        'Date'      => $data->fecha,
+        'Name'      => $data->razon_social,
+        'Code'      => $data->codigo,
+        'Product'   => $data->producto,
+        'Category'  => $data->categoria,
+        'Quantity'  => $data->cantidad,
+        'Sale Price'=> $data->venta
+      ];
     });
   }
 }

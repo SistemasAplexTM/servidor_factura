@@ -20,4 +20,4 @@ Auth::routes();
 Route::get('/home', 'HomeController@index')->name('home');
 // Route::get('/test', 'HomeController@test')->name('test');
 Route::get('/test', 'Document\IndexController@TestDetail')->name('test');
-Route::get('/moreSales/{range_date}/{branch_id?}/{category?}', 'Document\IndexController@moreSales')->name('moreSales');
+Route::get('/moreSales/{date_ini}/{date_fin}/{branch_id?}/{category?}', 'Document\IndexController@moreSales')->name('moreSales');

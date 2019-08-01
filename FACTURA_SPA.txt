@@ -1,0 +1,6 @@
+2019-08-01
+
+- Redirreccionar segun el createRol
+- Seguridad del login se modifico para acceder a la ruta especifica segun el rol
+- Cambiar formato numero a las dos ultimas columnas del excel de gerencia
+- graficos al informe de gerencia
