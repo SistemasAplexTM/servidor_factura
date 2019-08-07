@@ -74,8 +74,18 @@ class IndexController extends Controller
    });
   }
 
-  public function moreSales($date_ini, $date_fin, $branch_id = false, $category = false)
+  public function moreSales($date_ini, $date_fin, $branch_id = false, $category = false, $group = false)
   {
+    $cant = 'detalle.cantidad';
+    $venta = 'detalle.venta';
+    if ($group === 'true') {
+      $cant = DB::raw('SUM(detalle.cantidad) AS cantidad');
+      $venta = DB::raw('SUM(detalle.venta) AS venta');
+      $group = true;
+    }else{
+      $group = false;
+    }
+
     if ($branch_id == 'null') {
       $branch_id = false;
     }
@@ -87,19 +97,13 @@ class IndexController extends Controller
       $end = $date_fin;
   // DB::connection()->enableQueryLog();
       $data = DocumentDetail::select(
-      'detalle.id',
-      'd.consecutivo',
       'd.fecha',
       'e.razon_social',
       'b.codigo',
       'b.descripcion AS producto',
       'c.descripcion AS categoria',
-      'detalle.cantidad',
-      'detalle.costo',
-      'detalle.venta',
-      'detalle.iva',
-      'detalle.bodega_id',
-      'detalle.producto_id'
+      $cant,
+      $venta
       )
       ->join('producto AS b', 'detalle.producto_id', 'b.id')
       ->join('unidad_medida AS c', 'b.categoria_id', 'c.id')
@@ -116,14 +120,23 @@ class IndexController extends Controller
       ->when($category, function ($query, $category) {
           return $query->where('b.categoria_id', $category);
       })
+      ->when($group, function ($query, $data) {
+          return $query->groupBy(
+            'b.codigo',
+            'b.descripcion',
+            'c.descripcion',
+            'd.fecha',
+            'e.razon_social',
+            'b.codigo'
+          );
+      })
       ->get();
     // return DB::getQueryLog();
     if ($data->count() == 0){
      $data = [];
     }
-    return (new FastExcel($data))->download('informe_comercial.xlsx', function($data){
+    return (new FastExcel($data))->download('informe_comercial.csv', function($data){
       return [
-        // 'Item'      => $data->consecutivo,
         'Date'      => $data->fecha,
         'Name'      => $data->razon_social,
         'Code'      => $data->codigo,
