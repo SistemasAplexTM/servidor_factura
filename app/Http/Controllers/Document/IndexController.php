@@ -50,15 +50,15 @@ class IndexController extends Controller
    // DB::connection()->enableQueryLog();
    $data = DocumentDetail::select(
      'producto_id','bodega_id',
-     DB::raw('FORMAT(Sum(cant_final), 2) AS saldo'),
-     DB::raw('FORMAT(sum(detalle.total_costo) / sum(detalle.cant_final), 2) AS costo')
+     DB::raw('FORMAT(Sum(cant_final), 2) AS saldo')
+    //  DB::raw('FORMAT(sum(detalle.total_costo) / sum(detalle.cant_final), 2) AS costo')
      )->with(['product', 'branch'])
      ->whereNull('detalle.deleted_at')
      ->where([['bodega_id', '<>', 0], ['producto_id', '<>', 0]])
      ->groupBy('producto_id', 'bodega_id')->havingRaw('saldo > 0')->get();
    // return DB::getQueryLog();
    // return $data;
-   return (new FastExcel($data))->download('InformexBodega.xlsx', function($data){
+   return (new FastExcel($data))->download('InformexBodega.csv', function($data){
     return [
      'Bodega' => $data->branch['razon_social'],
      'Código' => $data->product['codigo'],
@@ -76,11 +76,7 @@ class IndexController extends Controller
 
   public function moreSales($date_ini, $date_fin, $branch_id = false, $category = false, $group = false)
   {
-    $cant = 'detalle.cantidad';
-    $venta = 'detalle.venta';
     if ($group === 'true') {
-      $cant = DB::raw('SUM(detalle.cantidad) AS cantidad');
-      $venta = DB::raw('SUM(detalle.venta) AS venta');
       $group = true;
     }else{
       $group = false;
@@ -96,38 +92,39 @@ class IndexController extends Controller
       $start = $date_ini;
       $end = $date_fin;
   // DB::connection()->enableQueryLog();
-      $data = DocumentDetail::select(
-      'd.fecha',
-      'e.razon_social',
-      'b.codigo',
-      'b.descripcion AS producto',
-      'c.descripcion AS categoria',
-      $cant,
-      $venta
-      )
-      ->join('producto AS b', 'detalle.producto_id', 'b.id')
-      ->join('unidad_medida AS c', 'b.categoria_id', 'c.id')
-      ->join('documento AS d', 'detalle.documento_id', 'd.id')
-      ->join('setup AS e', 'd.sucursal_id', 'e.id')
-      ->join('tipo AS f', 'd.tipo_id', 'f.id')
+
+      $data = DocumentDetail::join('documento AS b', 'detalle.documento_id', 'b.id')
+      ->join('producto AS c', 'detalle.producto_id', 'c.id')
+      ->join('unidad_medida AS d', 'c.categoria_id', 'd.id')
+      ->join('setup AS e', 'b.sucursal_id', 'e.id')
+      ->join('tipo AS f', 'b.tipo_id', 'f.id')
       ->whereNull('detalle.deleted_at')
-      ->whereNull('d.deleted_at')
-      ->whereBetween('d.fecha', [$start, $end])
+      ->whereNull('b.deleted_at')
+      ->whereBetween('b.fecha', [$start, $end])
       ->where('f.type_pivot_id', 1)
       ->when($branch_id, function ($query, $branch_id) {
-          return $query->where('d.sucursal_id', $branch_id);
+          return $query->where('b.sucursal_id', $branch_id);
       })
       ->when($category, function ($query, $category) {
-          return $query->where('b.categoria_id', $category);
+          return $query->where('c.categoria_id', $category);
       })
       ->when($group, function ($query, $data) {
-          return $query->groupBy(
-            'b.codigo',
-            'b.descripcion',
+          return $query->select(
+            'd.descripcion AS categoria',
+            'c.descripcion AS producto',
+            DB::raw('SUM(detalle.cantidad) AS cantidad'),
+            DB::raw('SUM(detalle.cantidad * detalle.precio) AS venta')
+            )
+          ->groupBy(
             'c.descripcion',
-            'd.fecha',
-            'e.razon_social',
-            'b.codigo'
+            'd.descripcion'
+          );
+      }, function($query, $data){
+        return $query->select(
+          'd.descripcion AS categoria',
+          'c.descripcion AS producto',
+          'detalle.cantidad AS cantidad',
+          'detalle.venta AS venta'
           );
       })
       ->get();
@@ -137,9 +134,9 @@ class IndexController extends Controller
     }
     return (new FastExcel($data))->download('informe_comercial.csv', function($data){
       return [
-        'Date'      => $data->fecha,
-        'Name'      => $data->razon_social,
-        'Code'      => $data->codigo,
+        // 'Date'      => $data->fecha,
+        // 'Name'      => $data->razon_social,
+        // 'Code'      => $data->codigo,
         'Product'   => $data->producto,
         'Category'  => $data->categoria,
         'Quantity'  => $data->cantidad,

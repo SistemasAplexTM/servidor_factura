@@ -1,0 +1,857 @@
+DELIMITER $$
+CREATE PROCEDURE `getCabeceraCuadreByIdSucursal`(IN `id_sucursal` INT, IN `fecha` DATE)
+    NO SQL
+SELECT
+a.id,
+c.razon_social,
+b.nombre,
+a.cuadre,
+a.valor_caja,
+a.fecha,
+a.observacion,
+a.fecha_inicio,
+a.fecha_final,
+a.impreso
+FROM
+cajero_cuadre AS a
+INNER JOIN usuario AS b ON b.id= a.`user_id`
+INNER JOIN setup AS c ON c.id= a.sucursal_id
+WHERE
+a.sucursal_id = id_sucursal
+AND a.fecha = fecha$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getBirthdateTerceros`(IN `fecha` VARCHAR(20))
+    NO SQL
+SELECT
+terceros.id,
+terceros.nombre,
+terceros.direccion,
+terceros.telefono,
+terceros.ciudad,
+terceros.email,
+terceros.nacimiento,
+terceros.created_at,
+terceros.updated_at,
+terceros.deleted_at,
+terceros.documento,
+terceros.usado,
+DATE_FORMAT(terceros.nacimiento, '%d') - DATE_FORMAT(now(), '%d') AS dias
+FROM
+terceros
+WHERE
+terceros.nacimiento like fecha AND
+terceros.deleted_at IS NULL AND
+(DATE_FORMAT(terceros.nacimiento, '%d') - DATE_FORMAT(now(), '%d')) >= 0
+ORDER BY
+(DATE_FORMAT(terceros.nacimiento, '%d') - DATE_FORMAT(now(), '%d')) ASC$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getEgresosCuadreByFecha`(IN `f_ini` DATE, IN `f_fin` DATE, IN `id_user` INT)
+    NO SQL
+SELECT
+c.descripcion,
+c.total_venta AS valor
+FROM
+tipo AS b
+INNER JOIN documento AS a ON a.tipo_id = b.id
+INNER JOIN detalle AS c ON c.documento_id = a.id
+WHERE
+a.fecha BETWEEN f_ini AND f_fin
+AND a.usuario_id = id_user AND
+b.ingreso_egreso = 1 AND
+b.deleted_at IS NULL AND
+a.deleted_at IS NULL AND
+c.deleted_at IS NULL$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getEgresosCuadreByIdSucursal`(IN `f_ini` DATE, IN `id_sucursal` INT)
+    NO SQL
+SELECT
+a.id,
+a.descripcion,
+a.total_costo as valor,
+a.bodega_id as sucursal_id
+FROM
+detalle AS a
+INNER JOIN documento AS c ON a.documento_id = c.id
+WHERE
+c.fecha = f_ini AND
+a.bodega_id = id_sucursal AND
+a.producto_id = 0 AND
+a.deleted_at IS NULL$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getFacturasCuadreByFecha`(IN `f_ini` DATE, IN `id_sucursal` INT)
+    NO SQL
+SELECT
+(SELECT
+IFNULL(Sum(de.cantidad),0) AS cantidad
+FROM
+detalle AS de
+WHERE
+de.documento_id = doc.id) AS productos_total,
+(SELECT
+Sum(detalle_pago.valor)
+FROM
+detalle_pago
+WHERE
+detalle_pago.documento_id = doc.id) AS valor,
+doc.consecutivo,
+doc.id AS id_documento,
+estado.descripcion AS status_doc,
+estado.id AS status_doc_id,
+terceros.nombre AS vendedor,
+(doc.descuento_valor + ROUND(doc.descuento + (doc.descuento * g.iva / 100), 0)) AS descuento_valor,
+MAX(
+  CASE
+		WHEN form.id = 1 THEN 
+			(SELECT
+				SUM(det1.valor)
+			FROM
+			documento AS doc1
+			INNER JOIN detalle_pago AS det1 ON det1.documento_id = doc1.id
+			INNER JOIN forma_pago AS form1 ON det1.forma_pago_id = form1.id
+			WHERE
+				doc1.fecha = f_ini
+			AND doc1.sucursal_id = id_sucursal
+			AND form1.id = 1
+			AND doc1.deleted_at IS NULL
+            AND doc.id = doc1.id) 
+		ELSE '-'  
+END
+ ) AS efectivo,
+MAX(
+  CASE
+		WHEN form.id = 3 THEN 
+			(SELECT
+				SUM(det1.valor)
+			FROM
+			documento AS doc1
+			INNER JOIN detalle_pago AS det1 ON det1.documento_id = doc1.id
+			INNER JOIN forma_pago AS form1 ON det1.forma_pago_id = form1.id
+			WHERE
+				doc1.fecha = f_ini
+			AND doc1.sucursal_id = id_sucursal
+			AND form1.id = 3
+			AND doc1.deleted_at IS NULL
+            AND doc.id = doc1.id) 
+		ELSE '-'  
+END
+ ) AS credito,
+MAX(
+  CASE
+		WHEN form.id = 4 THEN 
+			(SELECT
+				SUM(det1.valor)
+			FROM
+			documento AS doc1
+			INNER JOIN detalle_pago AS det1 ON det1.documento_id = doc1.id
+			INNER JOIN forma_pago AS form1 ON det1.forma_pago_id = form1.id
+			WHERE
+				doc1.fecha = f_ini
+			AND doc1.sucursal_id = id_sucursal
+			AND form1.id = 4
+			AND doc1.deleted_at IS NULL
+            AND doc.id = doc1.id) 
+		ELSE '-' 
+END
+ ) AS debito,
+ MAX(
+  CASE
+		WHEN form.id = 5 THEN 
+			(SELECT
+				SUM(det1.valor)
+			FROM
+			documento AS doc1
+			INNER JOIN detalle_pago AS det1 ON det1.documento_id = doc1.id
+			INNER JOIN forma_pago AS form1 ON det1.forma_pago_id = form1.id
+			WHERE
+				doc1.fecha = f_ini
+			AND doc1.sucursal_id = id_sucursal
+			AND form1.id = 5
+			AND doc1.deleted_at IS NULL
+            AND doc.id = doc1.id) 
+		ELSE '-' 
+END
+ ) AS nota_credito,
+MAX(
+  (SELECT
+				SUM(det1.valor)
+			FROM
+			documento AS doc1
+			INNER JOIN detalle_pago AS det1 ON det1.documento_id = doc1.id
+			INNER JOIN forma_pago AS form1 ON det1.forma_pago_id = form1.id
+			WHERE
+				doc1.fecha = f_ini
+			AND doc1.sucursal_id = id_sucursal
+			AND doc1.deleted_at IS NULL
+            AND doc.id = doc1.id)) AS total_recibido,
+ ((SELECT
+sum(IF (
+			(
+				MOD (
+					(
+						(x.cantidad * x.precio) * ((x.iva / 100) + 1)
+					),
+					10
+				) < (10 / 2)
+			),
+			(
+				(x.cantidad * x.precio) * ((x.iva / 100) + 1)
+			) + (
+				- MOD (
+					(
+						(x.cantidad * x.precio) * ((x.iva / 100) + 1)
+					),
+					10
+				)
+			),
+			(
+				(x.cantidad * x.precio) * ((x.iva / 100) + 1)
+			) + (
+				10 - (
+					MOD (
+						(
+							(x.cantidad * x.precio) * ((x.iva / 100) + 1)
+						),
+						10
+					)
+				)
+			)
+		) - x.descuento)- IFNULL(descuentos.descuento,0)
+FROM
+detalle AS x
+INNER JOIN documento AS z ON x.documento_id = z.id
+LEFT OUTER JOIN descuentos ON descuentos.id = z.descuentos_id
+WHERE
+z.fecha = f_ini AND
+z.sucursal_id = id_sucursal AND
+z.deleted_at IS NULL AND
+z.id = doc.id) -(SELECT
+sum(IF (
+			(
+				MOD (
+					(
+						(x.cantidad * x.precio) * ((x.iva / 100) + 1)
+					),
+					10
+				) < (10 / 2)
+			),
+			(
+				(x.cantidad * x.precio) * ((x.iva / 100) + 1)
+			) + (
+				- MOD (
+					(
+						(x.cantidad * x.precio) * ((x.iva / 100) + 1)
+					),
+					10
+				)
+			),
+			(
+				(x.cantidad * x.precio) * ((x.iva / 100) + 1)
+			) + (
+				10 - (
+					MOD (
+						(
+							(x.cantidad * x.precio) * ((x.iva / 100) + 1)
+						),
+						10
+					)
+				)
+			)
+		) - x.descuento)- IFNULL(descuentos.descuento,0)
+FROM
+detalle AS x
+INNER JOIN documento AS z ON x.documento_id = z.id
+LEFT OUTER JOIN descuentos ON descuentos.id = z.descuentos_id
+WHERE
+z.fecha = f_ini AND
+z.sucursal_id = id_sucursal AND
+z.deleted_at IS NULL AND
+z.id = doc.id) * descuentos.descuento / 100) AS total_venta
+FROM
+	documento AS doc
+INNER JOIN detalle_pago AS det ON det.documento_id = doc.id
+INNER JOIN detalle AS g ON g.documento_id = doc.id
+INNER JOIN forma_pago AS form ON det.forma_pago_id = form.id
+INNER JOIN tipo AS ti ON doc.tipo_id = ti.id
+INNER JOIN estado ON estado.id = doc.estatus
+INNER JOIN terceros ON doc.vendedor_id = terceros.id
+LEFT OUTER JOIN descuentos ON doc.descuentos_id = descuentos.id
+WHERE
+			doc.fecha = f_ini
+		AND doc.sucursal_id = id_sucursal
+		AND doc.deleted_at IS NULL
+GROUP BY
+doc.consecutivo,
+doc.id,
+estado.descripcion,
+estado.id,
+terceros.nombre$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getIngresosCuadreByFecha`(IN `f_ini` DATE, IN `f_fin` DATE, IN `id_user` INT)
+    NO SQL
+SELECT
+a.usuario_id,
+a.tipo_id,
+a.fecha,
+c.descripcion,
+SUM(b.valor) AS valor,
+a.pormayor,
+d.usa_cuadre,
+d.ingreso_egreso
+FROM
+documento AS a
+INNER JOIN detalle_pago AS b ON b.documento_id = a.id
+INNER JOIN forma_pago AS c ON b.forma_pago_id = c.id
+INNER JOIN tipo as d ON a.tipo_id = d.id
+WHERE
+a.fecha BETWEEN f_ini AND f_fin
+AND a.usuario_id = id_user
+GROUP BY
+a.usuario_id,
+a.tipo_id,
+a.fecha,
+c.descripcion,
+a.pormayor,
+d.usa_cuadre,
+d.ingreso_egreso$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getIngresosCuadreBySucursalId`(IN `f_ini` DATE, IN `id_sucursal` INT)
+    NO SQL
+SELECT
+a.tipo_id,
+c.descripcion,
+SUM(b.valor)  AS valor,
+a.pormayor,
+d.usa_cuadre,
+d.ingreso_egreso
+FROM
+documento AS a
+INNER JOIN detalle_pago AS b ON b.documento_id = a.id
+INNER JOIN forma_pago AS c ON b.forma_pago_id = c.id
+INNER JOIN tipo as d ON a.tipo_id = d.id
+WHERE
+a.fecha = f_ini
+AND a.sucursal_id = id_sucursal
+AND c.id <> 5 
+GROUP BY
+c.id,
+a.tipo_id,
+c.descripcion,
+a.pormayor,
+d.usa_cuadre,
+d.ingreso_egreso$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getListaIngresosCuadreByFecha`(IN `f_ini` DATE, IN `sucursal_id` INT)
+    NO SQL
+SELECT
+a.usuario_id,
+a.tipo_id,
+a.fecha,
+d.usa_cuadre,
+d.ingreso_egreso,
+Min(a.consecutivo) AS minimo,
+Max(a.consecutivo) AS maximo,
+Sum(b.total_venta) AS venta,
+d.descripcion,
+d.prefijo
+FROM
+documento AS a
+INNER JOIN tipo AS d ON a.tipo_id = d.id
+INNER JOIN detalle AS b ON b.documento_id = a.id
+WHERE
+a.fecha = f_ini 
+AND a.sucursal_id = sucursal_id
+and d.usa_cuadre = 1
+GROUP BY
+a.usuario_id,
+a.tipo_id,
+a.fecha,
+d.usa_cuadre,
+d.ingreso_egreso$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getNotasCreditoCuadreByIdSucursal`(IN `f_ini` DATE, IN `id_sucursal` INT)
+    NO SQL
+SELECT
+SUM(b.valor) AS valor
+FROM
+documento AS a
+INNER JOIN detalle_pago AS b ON b.documento_id = a.id
+INNER JOIN forma_pago AS c ON b.forma_pago_id = c.id
+INNER JOIN tipo as d ON a.tipo_id = d.id
+WHERE
+a.fecha = f_ini
+AND a.sucursal_id = id_sucursal
+AND c.id = 5
+AND a.deleted_at IS NULL$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getProductoByNotaCredito`(IN `cod` VARCHAR(20), IN `id_doc` INT, IN `id_pro` INT)
+    NO SQL
+SELECT
+	a.id AS id_doc,
+	a.documento_id,
+	a.producto_id AS id,
+	b.codigo,
+	a.descripcion,
+	a.bodega_id,
+	a.cantidad - IFNULL(
+		(
+			SELECT
+				SUM(detalle.cantidad) AS cantidad
+			FROM
+				detalle
+			WHERE
+				detalle.id_cruce = id_doc AND 
+				detalle.producto_id = id_pro
+		),
+		0
+	) AS cantidad,
+	a.precio AS precio_venta,
+	a.costo,
+	a.descuento,
+	a.iva AS valor,
+	ROUND(
+		(
+			(a.precio * a.cantidad) * a.iva / 100
+		)
+	) AS iva
+FROM
+	detalle AS a
+INNER JOIN producto AS b ON a.producto_id = b.id
+WHERE
+	a.documento_id = id_doc
+AND b.id = id_pro$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getSaldoProducto`(IN `bodega` INT, IN `id` INT)
+    NO SQL
+SELECT
+sum(detalle.cant_final) as saldo
+FROM
+detalle
+WHERE
+detalle.bodega_id = bodega AND
+detalle.producto_id = id AND
+detalle.producto_id <> 0 AND
+detalle.deleted_at IS NULL$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getSaldoProductoByInventarioDetalle`(IN `auditoria_id` INT, IN `prod_id` INT)
+    NO SQL
+SELECT
+Sum(a.cantidad) AS saldo
+FROM
+auditoria_inventario_detalle as a
+WHERE
+a.auditoria_inventario_id = auditoria_id AND
+a.producto_id = prod_id AND
+a.deleted_at IS NULL$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getTotalFacturasVendedorCuadreByFecha`(IN `f_ini` DATE, IN `id_sucursal` INT)
+    NO SQL
+SELECT
+b.vendedor_id AS vendedor_id,
+Sum(Round(
+   (
+    a.total_venta + (a.total_venta * a.iva / 100)
+   ),
+   0
+  )) - e.descuento AS total_venta,
+e.total_recibido,
+terceros.nombre AS vendedor
+FROM
+detalle AS a
+INNER JOIN documento AS b ON a.documento_id = b.id
+inner join tipo as z ON z.id = b.tipo_id
+INNER JOIN (
+ SELECT
+  c.vendedor_id,
+  Sum(d.valor) AS total_recibido,
+  sum(c.descuento_valor) + sum(c.descuento) AS descuento
+ FROM
+  documento AS c
+ INNER JOIN detalle_pago AS d ON d.documento_id = c.id
+ WHERE
+  c.fecha = f_ini
+ AND c.sucursal_id = id_sucursal
+AND d.forma_pago_id <> 5
+ GROUP BY
+  c.vendedor_id
+) AS e ON b.vendedor_id = e.vendedor_id
+LEFT OUTER JOIN terceros ON b.vendedor_id = terceros.id
+WHERE
+a.bodega_id = id_sucursal AND
+b.fecha = f_ini AND
+a.deleted_at IS NULL AND 
+z.default_list = 1
+GROUP BY
+ b.vendedor_id$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `sp_auditoria_generarAjusteEntrada`(IN `id_bodega` INT)
+    NO SQL
+SELECT
+	a.producto_id,
+	CONCAT_WS(
+		" - ",
+		producto.codigo,
+		producto.descripcion
+	) AS descripcion,
+	1 AS transaccion,
+	a.bodega_id,
+	abs(Sum(a.cant_final) *- 1) AS cantidad,
+	Sum(a.cant_final) *- 1 AS cant_final,
+	producto.costo AS precio,
+	producto.costo,
+	(Sum(a.cant_final) *- 1) * producto.costo AS total_costo
+FROM
+	detalle AS a
+INNER JOIN producto ON a.producto_id = producto.id
+INNER JOIN unidad_medida ON unidad_medida.id = producto.categoria_id
+WHERE
+	a.bodega_id = id_bodega
+GROUP BY
+	a.producto_id,
+	producto.codigo,
+	producto.referencia,
+	producto.descripcion,
+	producto.fit
+HAVING
+	(Sum(a.cant_final) *- 1) > 0$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `sp_auditoria_generarAjusteSalida`(IN `id_bodega` INT)
+    NO SQL
+SELECT
+	a.producto_id,
+	CONCAT_WS(
+		" - ",
+		producto.codigo,
+		producto.descripcion
+	) AS descripcion,
+	2 AS transaccion,
+	a.bodega_id,
+	abs(Sum(a.cant_final)) AS cantidad,
+	(Sum(a.cant_final) *- 1) AS cant_final,
+	producto.costo AS precio,
+	producto.costo,
+	(Sum(a.cant_final) *- 1) * producto.costo as total_costo
+FROM
+	detalle AS a
+INNER JOIN producto ON a.producto_id = producto.id
+INNER JOIN unidad_medida ON unidad_medida.id = producto.categoria_id
+WHERE
+	a.bodega_id = id_bodega
+GROUP BY
+	a.producto_id,
+	producto.codigo,
+	producto.referencia,
+	producto.descripcion,
+	producto.fit
+HAVING
+	(Sum(a.cant_final) *- 1) < 0$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `sp_auditoria_generarAjusteSalidaByIdAuditoria`(IN `codigo` VARCHAR(20), IN `auditoria_id` INT)
+    NO SQL
+SELECT
+	a.producto_id,
+	CONCAT_WS(
+		" - ",
+		a.codigo_barras,
+		c.descripcion
+	) AS descripcion,
+	2 AS transaccion,
+	b.bodega_id,
+	Sum(a.cantidad) AS cantidad,
+	Sum(a.cantidad * -1) AS cant_final,
+	c.costo AS precio,
+	c.costo,
+	Sum(a.cantidad * -1) * c.costo AS total_costo
+FROM
+	auditoria_inventario_detalle AS a
+INNER JOIN auditoria_inventario AS b ON b.id = a.auditoria_inventario_id
+INNER JOIN producto AS c ON c.id = a.producto_id
+INNER JOIN unidad_medida AS d ON d.id = c.categoria_id
+WHERE
+	a.deleted_at IS NULL
+AND CONCAT(
+	b.bodega_id,
+	DATE_FORMAT(b.fecha, '%Y%m%d'),
+	b.tipo_documento_auditoria_id
+) = codigo AND a.auditoria_inventario_id = auditoria_id
+GROUP BY
+	a.producto_id,
+	b.bodega_id,
+	c.costo,
+    a.codigo_barras$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `sp_auditoria_generarSaldoInicial`(IN `codigo` VARCHAR(20))
+    NO SQL
+SELECT
+	a.producto_id,
+	CONCAT_WS(
+		" - ",
+		a.codigo_barras,
+		c.descripcion
+	) AS descripcion,
+	1 AS transaccion,
+	b.bodega_id,
+	Sum(a.cantidad) AS cantidad,
+	Sum(a.cantidad) AS cant_final,
+	c.costo AS precio,
+	c.costo,
+	Sum(a.cantidad) * c.costo AS total_costo
+FROM
+	auditoria_inventario_detalle AS a
+INNER JOIN auditoria_inventario AS b ON b.id = a.auditoria_inventario_id
+INNER JOIN producto AS c ON c.id = a.producto_id
+INNER JOIN unidad_medida AS d ON d.id = c.categoria_id
+WHERE
+	a.deleted_at IS NULL
+AND CONCAT(
+	b.bodega_id,
+	DATE_FORMAT(b.fecha, '%Y%m%d'),
+	b.tipo_documento_auditoria_id
+) = codigo
+GROUP BY
+	a.producto_id,
+	b.bodega_id,
+	c.costo,
+    a.codigo_barras$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `sp_auditoria_generarSaldoInicialByidAuditoria`(IN `codigo` VARCHAR(20), IN `id_auditoria` INT)
+    NO SQL
+SELECT
+	a.producto_id,
+	CONCAT_WS(
+		" - ",
+		a.codigo_barras,
+		c.descripcion
+	) AS descripcion,
+	1 AS transaccion,
+	b.bodega_id,
+	Sum(a.cantidad) AS cantidad,
+	Sum(a.cantidad) AS cant_final,
+	c.costo AS precio,
+	c.costo,
+	Sum(a.cantidad) * c.costo AS total_costo
+FROM
+	auditoria_inventario_detalle AS a
+INNER JOIN auditoria_inventario AS b ON b.id = a.auditoria_inventario_id
+INNER JOIN producto AS c ON c.id = a.producto_id
+INNER JOIN unidad_medida AS d ON d.id = c.categoria_id
+WHERE
+	a.deleted_at IS NULL
+AND CONCAT(
+	b.bodega_id,
+	DATE_FORMAT(b.fecha, '%Y%m%d'),
+	b.tipo_documento_auditoria_id
+) = codigo AND a.auditoria_inventario_id = id_auditoria
+GROUP BY
+	a.producto_id,
+	b.bodega_id,
+	c.costo,
+    a.codigo_barras$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE FUNCTION `getConsecutivoByTipo`(`id_tipo` INT) RETURNS int(11)
+    NO SQL
+RETURN (SELECT
+tipo.consecutivo
+FROM
+tipo
+WHERE
+tipo.id = id_tipo AND
+tipo.deleted_at IS NULL) + 
+(SELECT
+Count(a.tipo_id) AS consecutivo
+FROM
+aux_consecutivo AS a
+WHERE
+a.deleted_at IS NULL AND
+a.tipo_id = id_tipo )$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getCabeceraCuadreByIdUser`(IN `id_user` INT, IN `sucursal_id` INT, IN `fecha` DATE)
+    NO SQL
+SELECT
+a.id,
+c.razon_social,
+b.nombre,
+a.cuadre,
+a.valor_caja,
+a.fecha,
+a.observacion,
+a.fecha_inicio,
+a.fecha_final,
+a.impreso
+FROM
+cajero_cuadre AS a
+INNER JOIN usuario AS b ON b.id= a.`user_id`
+INNER JOIN setup AS c ON c.id= a.sucursal_id
+WHERE
+a.`user_id` = id_user
+AND a.sucursal_id = sucursal_id
+AND a.fecha = fecha$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getDatosRemision`(IN `documento_id` INT, IN `sucursal_id` INT)
+    NO SQL
+SELECT
+d.descripcion AS categoria,
+b.fit,
+c.descripcion AS grupo,
+Sum(a.cantidad) AS cantidad_total,
+a.bodega_id,
+b.categoria_id,
+b.referencia,
+b.descripcion
+FROM
+detalle AS a
+INNER JOIN producto AS b ON a.producto_id = b.id
+INNER JOIN grupo AS c ON b.grupo_id = c.id
+INNER JOIN unidad_medida AS d ON d.id = b.categoria_id
+WHERE
+a.documento_id = documento_id AND
+a.bodega_id = sucursal_id AND
+a.transaccion = 1
+GROUP BY
+b.categoria_id,
+b.fit,
+c.descripcion,
+b.referencia,
+b.descripcion
+ORDER BY
+a.bodega_id ASC,
+b.categoria_id ASC$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `getConsecutivoCuadreBySucursal`(IN `sucursal` INT)
+    NO SQL
+SELECT
+Count(cajero_cuadre.id) AS maximo
+FROM
+cajero_cuadre
+WHERE
+cajero_cuadre.sucursal_id = sucursal$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `sp_generarTraslado`(IN `id_doc` INT)
+    NO SQL
+SELECT
+	a.producto_id,
+	CONCAT_WS(
+		" - ",
+		a.codigo_barras,
+		c.descripcion
+	) AS descripcion,
+	2 AS transaccion,
+	b.bodega_id,
+	Sum(a.cantidad) AS cantidad,
+	(Sum(a.cantidad) * -1) AS cant_final,
+	c.costo AS precio,
+	c.costo,
+	(Sum(a.cantidad) * c.costo) * -1 AS total_costo
+FROM
+	auditoria_inventario_detalle AS a
+INNER JOIN auditoria_inventario AS b ON b.id = a.auditoria_inventario_id
+INNER JOIN producto AS c ON c.id = a.producto_id
+INNER JOIN unidad_medida AS d ON d.id = c.categoria_id
+WHERE
+	a.deleted_at IS NULL
+AND b.tipo_documento_id = id_doc
+GROUP BY
+	a.producto_id,
+	b.bodega_id,
+	c.costo,
+	a.codigo_barras,
+	c.descripcion$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `sp_getConsecutivo`(IN `id_tipo` INT, IN `id_doc` INT, IN `fecha` TIMESTAMP)
+    NO SQL
+BEGIN
+SELECT getConsecutivoByTipo(id_tipo) AS consecutivo;
+INSERT INTO aux_consecutivo 
+(tipo_id,created_at,id_documento) 
+VALUES 
+(id_tipo,fecha,id_doc);
+END$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE PROCEDURE `sp_getEntradasProductos`(IN `codigo` VARCHAR(50))
+    NO SQL
+SELECT
+CONCAT(
+		tipo.prefijo,
+		documento.consecutivo
+	) AS documento,
+tipo.id AS tipo_doc_id,
+documento.fecha,
+producto.referencia,
+producto.codigo,
+producto.descripcion,
+setup.razon_social AS bodega,
+IF (
+	detalle.transaccion = 3,
+	'Devolución',
+IF (
+	detalle.transaccion = 1,
+	'Entrada',
+	'Salida'
+)
+) AS transaccion,
+detalle.cant_final,
+detalle.costo,
+detalle.venta,
+detalle.total_costo,
+detalle.total_venta,
+detalle.id,
+unidad_medida.descripcion AS categoria
+FROM
+	detalle
+INNER JOIN documento ON detalle.documento_id = documento.id
+INNER JOIN tipo ON documento.tipo_id = tipo.id
+INNER JOIN setup ON detalle.bodega_id = setup.id
+INNER JOIN producto ON detalle.producto_id = producto.id
+INNER JOIN unidad_medida ON unidad_medida.id = producto.categoria_id
+WHERE producto.codigo = codigo AND detalle.transaccion = 1 AND tipo.id <> 3 and tipo.id <> 5
+ORDER BY
+	detalle.id DESC
+LIMIT 10$$
+DELIMITER ;
