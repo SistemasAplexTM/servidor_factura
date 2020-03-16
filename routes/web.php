@@ -18,6 +18,7 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
-// Route::get('/test', 'HomeController@test')->name('test');
-Route::get('/test', 'Document\IndexController@TestDetail')->name('test');
+// http://serverfactura.4factura.com/informeInventario/2020-03-16
+Route::get('/informe_inventario/{date?}/{hour?}', 'Document\IndexController@informeInventario')->name('informeInventario');
+Route::get('/informe_inventario_json/{date?}/{hour?}', 'Document\IndexController@informeInventarioJson')->name('informeInventarioJson');
 Route::get('/moreSales/{date_ini}/{date_fin}/{branch_id?}/{category?}/{group}', 'Document\IndexController@moreSales')->name('moreSales');

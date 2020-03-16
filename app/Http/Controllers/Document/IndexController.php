@@ -45,33 +45,46 @@ class IndexController extends Controller
    return response()->json(['totalRecords' => $count, 'rows' => $data]);
   }
 
-  public function TestDetail()
+  public function informeInventario($date = false, $hour = false)
   {
-   // DB::connection()->enableQueryLog();
-   $data = DocumentDetail::select(
-     'producto_id','bodega_id',
-     DB::raw('FORMAT(Sum(cant_final), 2) AS saldo')
-    //  DB::raw('FORMAT(sum(detalle.total_costo) / sum(detalle.cant_final), 2) AS costo')
-     )->with(['product', 'branch'])
-     ->whereNull('detalle.deleted_at')
-     ->where([['bodega_id', '<>', 0], ['producto_id', '<>', 0]])
-     ->groupBy('producto_id', 'bodega_id')->havingRaw('saldo > 0')->get();
-   // return DB::getQueryLog();
-   // return $data;
+    $data = $this->sqlInventario($date, $hour);
    return (new FastExcel($data))->download('InformexBodega.csv', function($data){
     return [
      'Bodega' => $data->branch['razon_social'],
-     'Código' => $data->product['codigo'],
+     'C贸digo' => $data->product['codigo'],
      'Referencia' => $data->product['referencia'],
      'Descripcion' => $data->product['descripcion'],
      'Talla' => $data->product['size']['descripcion'],
-     'Categoría' => $data->product['category']['descripcion'],
+     'Categor铆a' => $data->product['category']['descripcion'],
      'Saldo' => $data->saldo,
      'Costo' => $data->costo,
      'Venta' => $data->product['precio_venta'],
      'Pormayor' => $data->product['precio_pormayor']
     ];
    });
+  }
+  public function informeInventarioJson($date = false, $hour = false)
+  {
+    $data = $this->sqlInventario($date, $hour);
+    return response()->json($data);
+  }
+
+  public function sqlInventario($date = false, $hour = false)
+  {
+    //  DB::connection()->enableQueryLog();
+   $data = DocumentDetail::select(
+     'producto_id','bodega_id',
+     DB::raw('Sum(cant_final) AS saldo')
+    //  DB::raw('FORMAT(sum(detalle.total_costo) / sum(detalle.cant_final), 2) AS costo')
+     )->with(['product', 'branch'])
+     ->whereNull('detalle.deleted_at')
+     ->where([['bodega_id', '<>', 0], ['producto_id', '<>', 0]])
+     ->when($date, function ($query, $data) {
+        return $query->where('created_at', '<=', $data . ':00');
+      })
+     ->groupBy('producto_id', 'bodega_id')->havingRaw('saldo > 0')->get();
+    //  return DB::getQueryLog();
+     return $data;
   }
 
   public function moreSales($date_ini, $date_fin, $branch_id = false, $category = false, $group = false)
@@ -91,7 +104,7 @@ class IndexController extends Controller
       // $dateArray = explode('@', $range_date);
       $start = $date_ini;
       $end = $date_fin;
-  // DB::connection()->enableQueryLog();
+    // DB::connection()->enableQueryLog();
 
       $data = DocumentDetail::join('documento AS b', 'detalle.documento_id', 'b.id')
       ->join('producto AS c', 'detalle.producto_id', 'c.id')
