@@ -16,6 +16,7 @@ class Product extends Model
      'color_id',
      'categoria_id',
      'grupo_id',
+     'tema_id',
      'tipo_producto_id',
      'precio_venta',
      'precio_pormayor',

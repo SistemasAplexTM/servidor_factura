@@ -51,11 +51,11 @@ class IndexController extends Controller
    return (new FastExcel($data))->download('InformexBodega.csv', function($data){
     return [
      'Bodega' => $data->branch['razon_social'],
-     'C贸digo' => $data->product['codigo'],
+     'Codigo' => $data->product['codigo'],
      'Referencia' => $data->product['referencia'],
      'Descripcion' => $data->product['descripcion'],
      'Talla' => $data->product['size']['descripcion'],
-     'Categor铆a' => $data->product['category']['descripcion'],
+     'Categoria' => $data->product['category']['descripcion'],
      'Saldo' => $data->saldo,
      'Costo' => $data->costo,
      'Venta' => $data->product['precio_venta'],
@@ -82,7 +82,7 @@ class IndexController extends Controller
      ->when($date, function ($query, $data) {
         return $query->where('created_at', '<=', $data . ':00');
       })
-     ->groupBy('producto_id', 'bodega_id')->havingRaw('saldo > 0')->get();
+     ->groupBy('producto_id', 'bodega_id')->havingRaw('saldo > 0')->limit(10)->get();
     //  return DB::getQueryLog();
      return $data;
   }
