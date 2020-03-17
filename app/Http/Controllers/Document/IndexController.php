@@ -48,18 +48,19 @@ class IndexController extends Controller
   public function informeInventario($date = false, $hour = false)
   {
     $data = $this->sqlInventario($date, $hour);
-   return (new FastExcel($data))->download('InformexBodega.csv', function($data){
+   return (new FastExcel($data))->download('InformexBodega.csv', function($dat) use($date){
     return [
-     'Bodega' => $data->branch['razon_social'],
-     'Codigo' => $data->product['codigo'],
-     'Referencia' => $data->product['referencia'],
-     'Descripcion' => $data->product['descripcion'],
-     'Talla' => $data->product['size']['descripcion'],
-     'Categoria' => $data->product['category']['descripcion'],
-     'Saldo' => $data->saldo,
-     'Costo' => $data->costo,
-     'Venta' => $data->product['precio_venta'],
-     'Pormayor' => $data->product['precio_pormayor']
+      'Fecha' => $date,
+      'Bodega' => $dat->branch['razon_social'],
+      'Codigo' => $dat->product['codigo'],
+      'Referencia' => $dat->product['referencia'],
+      'Descripcion' => $dat->product['descripcion'],
+      'Talla' => $dat->product['size']['descripcion'],
+      'Categoria' => $dat->product['category']['descripcion'],
+      'Saldo' => $dat->saldo,
+      'Costo' => $dat->costo,
+      'Venta' => $dat->product['precio_venta'],
+      'Pormayor' => $dat->product['precio_pormayor']
     ];
    });
   }
@@ -74,7 +75,8 @@ class IndexController extends Controller
     //  DB::connection()->enableQueryLog();
    $data = DocumentDetail::select(
      'producto_id','bodega_id',
-     DB::raw('Sum(cant_final) AS saldo')
+     DB::raw('Sum(cant_final) AS saldo'),
+     DB::raw("'".$date."' AS fecha")
     //  DB::raw('FORMAT(sum(detalle.total_costo) / sum(detalle.cant_final), 2) AS costo')
      )->with(['product', 'branch'])
      ->whereNull('detalle.deleted_at')
