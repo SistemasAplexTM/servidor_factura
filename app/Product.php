@@ -17,6 +17,7 @@ class Product extends Model
      'categoria_id',
      'grupo_id',
      'tema_id',
+     'tela_id',
      'tipo_producto_id',
      'precio_venta',
      'precio_pormayor',
@@ -44,5 +45,15 @@ class Product extends Model
     public function size()
     {
         return $this->belongsTo('App\AdminTable', 'talla_id', 'id')->select(['id', 'descripcion']);
+    }
+
+    public function theme()
+    {
+        return $this->belongsTo('App\AdminTable', 'tema_id', 'id')->select(['id', 'descripcion']);
+    }
+
+    public function cloth()
+    {
+        return $this->belongsTo('App\AdminTable', 'tela_id', 'id')->select(['id', 'descripcion']);
     }
 }

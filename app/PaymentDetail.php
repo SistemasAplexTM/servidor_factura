@@ -31,4 +31,10 @@ class PaymentDetail extends Model
    return $this->belongsTo('App\Payment', 'forma_pago_id')
    ->select(['id', 'descripcion']);
   }
+
+  public function document()
+  {
+   return $this->belongsTo('App\Document', 'documento_id')->with('branch')
+   ->select(['id', 'fecha', 'sucursal_id']);
+  }
 }

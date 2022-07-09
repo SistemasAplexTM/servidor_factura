@@ -45,17 +45,36 @@ class DocumentDetail extends Model
     public function product()
     {
      return $this->belongsTo('App\Product', 'producto_id', 'id')
-     ->select(['id', 'descripcion', 'categoria_id', 'talla_id', 'codigo', 'referencia', 'precio_venta', 'precio_pormayor'])
-     ->with('category', 'size')->whereNull('deleted_at')->where('categoria_id', '<>', 0)->where('id', '<>', 0);
+     ->select(['id', 'descripcion', 'categoria_id', 'talla_id', 'tema_id', 'tela_id', 'codigo', 'referencia', 'precio_venta', 'precio_pormayor'])
+     ->with('category', 'size', 'theme', 'cloth')->whereNull('deleted_at')->where('categoria_id', '<>', 0)->where('id', '<>', 0);
+    }
+
+    public function documentall()
+    {
+      return $this->belongsTo('App\Document', 'documento_id')
+      ->select(['id', 'fecha', 'sucursal_id', 'tipo_id', 'consecutivo', 'created_at'])
+      ->with(['branch', 'type'])
+      ->whereNull('deleted_at')->where('sucursal_id', '<>', 0);
     }
 
     public function document()
     {
       return $this->belongsTo('App\Document', 'documento_id')
-      ->select(['id', 'fecha', 'sucursal_id', 'tipo_id', 'consecutivo'])
+      ->select(['id', 'fecha', 'sucursal_id', 'tipo_id', 'consecutivo', 'created_at'])
       ->with(['branch', 'type'])
       ->whereHas('type', function ($q){
         $q->where('type_pivot_id', 1);
+      })
+      ->whereNull('deleted_at')->where('sucursal_id', '<>', 0);
+    }
+
+    public function documentpos()
+    {
+      return $this->belongsTo('App\Document', 'documento_id', 'id')
+      ->select(['id', 'fecha', 'sucursal_id', 'tipo_id', 'consecutivo', 'created_at'])
+      ->with(['branch', 'type'])
+      ->whereHas('type', function ($q){
+        $q->where('type_pivot_id', 14);
       })
       ->whereNull('deleted_at')->where('sucursal_id', '<>', 0);
     }
