@@ -26,7 +26,8 @@ class Controller extends BaseController
       'bodega_id',
       DB::raw('Sum(cant_final) AS saldo')
     )
-      ->groupBy('producto_id', 'bodega_id');
+    ->whereNull('deleted_at')
+    ->groupBy('producto_id', 'bodega_id');
 
     $data = DocumentDetail::select(
       'producto_id',

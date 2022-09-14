@@ -18,7 +18,8 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
-// http://serverfactura.4factura.com/informeInventario/2020-03-16
+// https://server.2factura.com/informe_inventario/2022-08-26
+// https://pos.2factura.com/api/store/upfReport/2021-05-12
 Route::get('/informe_inventario/{date?}/{hour?}', 'Document\IndexController@informeInventario')->name('informeInventario');
 Route::get('/informe_inventario_json/{date?}/{hour?}', 'Document\IndexController@informeInventarioJson')->name('informeInventarioJson');
 Route::get('/moreSales/{date_ini}/{date_fin}/{branch_id?}/{category?}/{group}', 'Document\IndexController@moreSales')->name('moreSales');

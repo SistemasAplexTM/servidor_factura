@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use App\User;
 /*
+http://infashion.2factura.com/web/index.php/informes_json/bodega?detail=&dates=2022-01-01/2022-01-31
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
