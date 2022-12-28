@@ -86,7 +86,7 @@ class IndexController extends Controller
     if ($negatives) {
       $havingSign = '<';
     }
-    //DB::connection()->enableQueryLog();
+    // DB::connection()->enableQueryLog();
     $data = $this->getUnionQueriesSaldosDetail($date);
     
     $b = DB::table(DB::raw("({$data->toSql()}) as b"))
@@ -142,7 +142,7 @@ class IndexController extends Controller
       )
       ->havingRaw('saldo ' . $havingSign . ' 0')
       ->get();
-     //return DB::getQueryLog();
+    //  return DB::getQueryLog();
     return $b;
   }
 
