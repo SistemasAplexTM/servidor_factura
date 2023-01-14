@@ -13,7 +13,7 @@ http://infashion.2factura.com/web/index.php/informes_json/bodega?detail=&dates=2
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-
+ 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
